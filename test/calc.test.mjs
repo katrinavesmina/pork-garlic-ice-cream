@@ -12,3 +12,19 @@ test('supplied Year 1 Winter verification case reconciles', () => {
   assert.equal(r.tax, 1513);
   assert.equal(r.machines[0].remainingLife, 7);
 });
+
+test('premise sales and transport follow entered production proportions', () => {
+  const r = calculateSeason({
+    ...suppliedWinter,
+    premises: ['A', 'D'],
+    premiseProduction: { A: 15000, D: 45000 },
+    opening: { cash: 100000, machines: [], debt: 0, taxLoss: 0 },
+    params: { ...params, premises: [
+      { id: 'A', name: 'Premise A', rent: 12000, transport: .3 },
+      { id: 'D', name: 'Premise D', rent: 17000, transport: .1 }
+    ] },
+    machines
+  });
+  assert.deepEqual(r.premiseAllocation.map(x => [x.production, x.sales]), [[15000, 15000], [45000, 45000]]);
+  assert.equal(r.transport, 9000);
+});

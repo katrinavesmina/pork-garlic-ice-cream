@@ -9,3 +9,8 @@
 .season-buttons { display: flex; gap: 7px; flex-wrap: wrap; }
 .season-buttons button { background: #f6e3d5; color: var(--wine); }
 .season-buttons button.selected { background: var(--wine); color: #fff; }
+.allocation-panel, .allocation-result, .sensitivity-panel { margin: 14px 0; padding: 13px; border: 1px solid #ead6d0; border-radius: 10px; background: #fffaf5; }
+.allocation-panel > strong { color: var(--wine); }
+.allocation-panel p, .sensitivity-panel p { margin: 4px 0 10px; }
+.allocation-result h4, .sensitivity-panel h4 { margin-top: 0; }
+.sensitivity-panel { border-left: 4px solid var(--coral); }

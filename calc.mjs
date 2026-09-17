@@ -37,9 +37,28 @@ export function calculateSeason(input) {
   const premiseIds = Array.isArray(input.premises) ? input.premises : [input.premise];
   const premises = premiseIds.map((id) => p.premises.find((x) => x.id === id)).filter(Boolean);
   const uniquePremises = premises.length ? premises : [];
-  const productionShare = uniquePremises.length ? production / uniquePremises.length : 0;
-  // Equal production split where no premise-specific split is supplied; sales follow this production share.
-  const transport = uniquePremises.reduce((s, premise) => s + (actualSales * (productionShare / Math.max(1, production)) * Number(premise.transport || 0)), 0);
+  const enteredAllocation = input.premiseProduction || {};
+  const enteredTotal = uniquePremises.reduce((sum, premise) => sum + Math.max(0, Number(enteredAllocation[premise.id] || 0)), 0);
+  // An entered premise allocation is scaled to the achievable production. When no
+  // allocation is entered, production is split evenly as a transparent fallback.
+  const shares = uniquePremises.map(premise => enteredTotal > 0 ? Math.max(0, Number(enteredAllocation[premise.id] || 0)) / enteredTotal : 1 / Math.max(1, uniquePremises.length));
+  const allocate = (total) => {
+    let posted = 0;
+    return uniquePremises.map((premise, index) => {
+      const amount = index === uniquePremises.length - 1 ? total - posted : round(total * shares[index]);
+      posted += amount;
+      return { premise, amount };
+    });
+  };
+  const productionAllocation = allocate(production);
+  const salesAllocation = allocate(actualSales);
+  const premiseAllocation = uniquePremises.map((premise, index) => ({
+    name: premise.name,
+    production: productionAllocation[index].amount,
+    sales: salesAllocation[index].amount,
+    transport: round(salesAllocation[index].amount * Number(premise.transport || 0))
+  }));
+  const transport = premiseAllocation.reduce((sum, item) => sum + item.transport, 0);
   const rent = uniquePremises.reduce((s, premise) => s + round(premise.rent), 0);
   const maintenance = owned.reduce((s, m) => s + round(m.maintenance), 0);
   const depreciation = owned.reduce((s, m) => s + round(m.depreciation), 0);
@@ -69,7 +88,7 @@ export function calculateSeason(input) {
     revenue, milk, maintenance, depreciation, grossProfit, transport: round(transport), market: round(input.market), bonus, salaries: round(p.salaries), rent,
     interest, minimumCosts: round(input.minimumCosts), preTaxProfit, taxLossUsed, taxableProfit, tax, netProfit,
     machinePurchases, borrowing, principalRepayment, cashBeforeFinance, closingCash, debt: openingDebt + borrowing - principalRepayment,
-    taxLoss, machines: nextMachines, premises: uniquePremises.map((x) => x.name), flags: {
+    taxLoss, machines: nextMachines, premises: uniquePremises.map((x) => x.name), premiseAllocation, flags: {
       productionCapped: requestedProduction > production, negativeBeforeFinance: cashBeforeFinance < 0, negativeClosing: closingCash < 0
     }
   };

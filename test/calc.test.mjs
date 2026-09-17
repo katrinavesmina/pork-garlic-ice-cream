@@ -10,6 +10,8 @@ test('supplied Year 1 Winter verification case reconciles', () => {
   assert.equal(r.closingCash, 82996);
   assert.equal(r.bonus, 2691);
   assert.equal(r.tax, 1513);
+  assert.equal(r.operatingCashFlow, 17996);
+  assert.equal(r.cashBeforeFinance, 82996);
   assert.equal(r.machines[0].remainingLife, 7);
 });
 

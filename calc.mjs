@@ -80,14 +80,16 @@ export function calculateSeason(input) {
   const machinePurchases = bought.reduce((s, m) => s + round(m.purchaseCost), 0);
   const scheduledPrincipal = round(input.principalRepayment) || (round(input.repaymentTerm) > 0 ? round((openingDebt + borrowing) / round(input.repaymentTerm)) : 0);
   const principalRepayment = Math.min(openingDebt + borrowing, Math.max(0, scheduledPrincipal + round(input.extraRepayment)));
-  const cashBeforeFinance = round(input.opening?.cash) + revenue - milk - maintenance - transport - round(input.market) - bonus - round(p.salaries) - rent - interest - round(input.minimumCosts) - tax - machinePurchases;
+  const openingCash = round(input.opening?.cash);
+  const operatingCashFlow = revenue - milk - maintenance - transport - round(input.market) - bonus - round(p.salaries) - rent - interest - round(input.minimumCosts) - tax;
+  const cashBeforeFinance = openingCash + operatingCashFlow - machinePurchases;
   const closingCash = cashBeforeFinance + borrowing - principalRepayment;
   const nextMachines = owned.map((m) => ({ ...m, remainingLife: Math.max(0, round(m.remainingLife) - 1) })).filter((m) => m.remainingLife > 0);
   return {
     requestedProduction, production, milkSupported, activeCapacity, requestedSales, assumedSales, actualSales, unusedMilk, spoilage,
     revenue, milk, maintenance, depreciation, grossProfit, transport: round(transport), market: round(input.market), bonus, salaries: round(p.salaries), rent,
     interest, minimumCosts: round(input.minimumCosts), preTaxProfit, taxLossUsed, taxableProfit, tax, netProfit,
-    machinePurchases, borrowing, principalRepayment, cashBeforeFinance, closingCash, debt: openingDebt + borrowing - principalRepayment,
+    openingCash, operatingCashFlow, machinePurchases, borrowing, principalRepayment, cashBeforeFinance, closingCash, debt: openingDebt + borrowing - principalRepayment,
     taxLoss, machines: nextMachines, premises: uniquePremises.map((x) => x.name), premiseAllocation, flags: {
       productionCapped: requestedProduction > production, negativeBeforeFinance: cashBeforeFinance < 0, negativeClosing: closingCash < 0
     }

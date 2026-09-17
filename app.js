@@ -2,18 +2,37 @@ import { calculateSeason, calculateBridge, suppliedWinter, money, round } from '
 
 const KEY = 'pork-garlic-year2-winter-planner-v1';
 const clone = (v) => JSON.parse(JSON.stringify(v));
-const y1Machines = [{ id:'M1', modelId:'M1', name:'Machine 1', capacity:72000, purchaseCost:35000, maintenance:1800, depreciation:4375, life:8 }];
-const y1Params = { price:2, milkPrice:20000, milkYield:20000, salaries:10000, bonusRate:0, taxRate:0,
-  premises:[{id:'D',name:'Premise D',rent:17000,transport:.1},{id:'E',name:'Premise E (estimate)',rent:0,transport:0}] };
+const y1Machines = [
+  { id:'M1', modelId:'M1', name:'Machine 1', capacity:72000, purchaseCost:35000, maintenance:1800, depreciation:4375, life:8 },
+  { id:'M2', modelId:'M2', name:'Machine 2', capacity:120000, purchaseCost:95000, maintenance:2900, depreciation:11875, life:8 },
+  { id:'M3', modelId:'M3', name:'Machine 3', capacity:68000, purchaseCost:38000, maintenance:2100, depreciation:4750, life:8 },
+  { id:'M4', modelId:'M4', name:'Machine 4', capacity:95000, purchaseCost:70000, maintenance:2900, depreciation:8750, life:8 },
+  { id:'M5', modelId:'M5', name:'Machine 5', capacity:45000, purchaseCost:28000, maintenance:1300, depreciation:3500, life:8 },
+  { id:'M6', modelId:'M6', name:'Machine 6', capacity:110000, purchaseCost:90000, maintenance:2900, depreciation:11250, life:8 }
+];
+const y1Premises = [
+  {id:'A',name:'Premise A (P)',slots:1,rent:12000,transport:.3},{id:'B',name:'Premise B (P)',slots:1,rent:10000,transport:.4},
+  {id:'C',name:'Premise C',slots:1,rent:12000,transport:.3},{id:'D',name:'Premise D',slots:1,rent:17000,transport:.1},
+  {id:'E',name:'Premise E',slots:2,rent:15000,transport:.2},{id:'F',name:'Premise F (P)',slots:3,rent:16000,transport:.2}
+];
+const y1Params = { price:2, milkPrice:20000, milkYield:20000, salaries:10000, bonusRate:5, taxRate:10, premises:clone(y1Premises) };
 const blankSeason = { production:0,milkTons:0,salesRequest:0,assumedSales:0,market:0,premise:'D',premises:['D'],machineUse:['M1'],purchases:[],borrowing:0,interestRate:0,repaymentTerm:0,principalRepayment:0,extraRepayment:0,minimumCosts:0 };
-const y2Params = { price:2, milkPrice:20000, milkYield:20000, salaries:10000, bonusRate:0, taxRate:0,
-  premises:[{id:'D',name:'Premise D',rent:17000,transport:.1},{id:'E',name:'Premise E',rent:0,transport:0},{id:'F',name:'Premise F',rent:0,transport:0}],
-  machines:[{id:'M1',modelId:'M1',name:'Machine 1',capacity:72000,purchaseCost:35000,maintenance:1800,depreciation:4375,life:8},{id:'M2',modelId:'M2',name:'Machine 2 (estimate)',capacity:0,purchaseCost:0,maintenance:0,depreciation:0,life:8}]
+const y2Params = { price:2, milkPrice:20000, milkYield:20000, salaries:10000, bonusRate:5, taxRate:10,
+  premises:clone(y1Premises), machines:clone(y1Machines)
 };
-const defaultScenario = { ...clone(blankSeason), production:60000,milkTons:3,salesRequest:60000,assumedSales:60000,market:3000,minimumCosts:4204, purchases:[], sensitivitySales:45000 };
+const defaultScenario = { ...clone(blankSeason), production:60000,milkTons:3,salesRequest:60000,assumedSales:60000,market:3000,minimumCosts:0, purchases:[], sensitivitySales:45000 };
 const defaults = () => ({ winter:{...clone(suppliedWinter),premises:['D']}, spring:clone(blankSeason),summer:clone(blankSeason),autumn:clone(blankSeason), year1Params:clone(y1Params),year1Machines:clone(y1Machines), y2Params:clone(y2Params), autumnOverride:{enabled:false,cash:0,debt:0,taxLoss:0,m1Life:0}, scenarioA:clone(defaultScenario),scenarioB:{...clone(defaultScenario),production:100000,milkTons:5,salesRequest:80000,assumedSales:80000,market:5000,sensitivitySales:60000}, recommendation:{choice:'A',reason:'Protect cash while Year 1 estimates are still being replaced.',assumption:'Actual Year 2 sales can be achieved without exceeding the planned allocation.'} });
 let state;
 try { state = JSON.parse(localStorage.getItem(KEY)) || defaults(); } catch { state = defaults(); }
+// Update earlier saved browser states to the Year 1 rule catalog without discarding user edits.
+const mergeCatalog = (current, rules) => rules.map(rule => ({ ...rule, ...(current || []).find(item => item.id === rule.id) }));
+state.year1Machines = mergeCatalog(state.year1Machines, y1Machines);
+state.year1Params = { ...y1Params, ...state.year1Params, premises: mergeCatalog(state.year1Params?.premises, y1Premises), bonusRate:5, taxRate:10 };
+state.y2Params = { ...y2Params, ...state.y2Params, premises: mergeCatalog(state.y2Params?.premises, y1Premises), machines: mergeCatalog(state.y2Params?.machines, y1Machines) };
+// Earlier versions listed Machine 2 as a zero-value placeholder. Replace that known placeholder with the Year 1 reference figures.
+const oldM2 = state.y2Params.machines.find(machine => machine.id === 'M2');
+if (oldM2 && !oldM2.capacity && !oldM2.purchaseCost && !oldM2.maintenance && !oldM2.depreciation) Object.assign(oldM2, y1Machines.find(machine => machine.id === 'M2'));
+if (state.winter?.minimumCosts === 4204) state.winter.minimumCosts = 0;
 
 const $ = (s) => document.querySelector(s);
 const title = (name, description) => `<div class="section-head"><div><h2>${name}</h2><p>${description}</p></div></div>`;
@@ -28,14 +47,13 @@ const inputValue = (el) => el.type === 'number' ? Number(el.value || 0) : el.val
 
 function seasonForm(key, season, result, isWinter=false) {
   const machineOptions = state.year1Machines;
-  const owned = result?.machines || [];
-  const inputMachineOptions = isWinter ? machineOptions : owned;
+  const inputMachineOptions = machineOptions;
   const premiseChecks = state.year1Params.premises.map(p => `<label><input type="checkbox" data-array="${key}.premises" value="${p.id}" ${season.premises?.includes(p.id)?'checked':''}> ${p.name}</label>`).join('');
-  const machineChecks = inputMachineOptions.map(m=>`<label><input type="checkbox" data-array="${key}.machineUse" value="${m.id}" ${season.machineUse?.includes(m.id)||season.machineUse?.includes(m.sourceId)||season.machineUse?.includes(m.modelId)?'checked':''}> ${m.name} (${money(m.capacity)})</label>`).join('') || '<em>There are no owned machines to use.</em>';
+  const machineChecks = inputMachineOptions.map(m=>`<label><input type="checkbox" data-array="${key}.machineUse" value="${m.id}" ${season.machineUse?.includes(m.id)||season.machineUse?.includes(m.sourceId)||season.machineUse?.includes(m.modelId)?'checked':''}> ${m.name} (${money(m.capacity)})</label>`).join('');
   const purchaseChecks = machineOptions.map(m=>`<label><input type="checkbox" data-array="${key}.purchases" value="${m.id}" ${season.purchases?.includes(m.id)?'checked':''}> Buy ${m.name}</label>`).join('');
-  return `<article class="card"><h3>Year 1 ${key[0].toUpperCase()+key.slice(1)} ${isWinter?'<span class="chip">verification case</span>':'<span class="chip">estimate — replace later</span>'}</h3>${isWinter?'<p class="subtle">Supplied classroom test case. The tax rate is set to zero because no rate was supplied.</p>':'<p class="subtle">Planning estimate only. Do not treat this as a real classroom result.</p>'}
+  return `<article class="card"><h3>Year 1 ${key[0].toUpperCase()+key.slice(1)} ${isWinter?'<span class="chip">verification case</span>':'<span class="chip">estimate — replace later</span>'}</h3>${isWinter?'<p class="subtle">Supplied classroom test case. Bonus is 5% of positive gross profit; game tax is 10% after tax-loss use.</p>':'<p class="subtle">Planning estimate only. Do not treat this as a real classroom result. Choose any Year 1 rule premise or machine; a machine only contributes capacity when owned or purchased.</p>'}
   <div class="fields">${isWinter?nInput('Opening cash',`${key}.openingCash`,season.openingCash):''}${nInput('Planned production',`${key}.production`,season.production)}${nInput('Milk purchased (tons)',`${key}.milkTons`,season.milkTons)}${nInput('Sales request',`${key}.salesRequest`,season.salesRequest)}${nInput('Assumed actual sales',`${key}.assumedSales`,season.assumedSales)}${nInput('Market investment',`${key}.market`,season.market)}${nInput('Minimum costs',`${key}.minimumCosts`,season.minimumCosts)}${nInput('Borrowing',`${key}.borrowing`,season.borrowing)}${nInput('Interest rate (%)',`${key}.interestRate`,season.interestRate)}${nInput('Repayment term (seasons)',`${key}.repaymentTerm`,season.repaymentTerm)}${nInput('Principal repayment',`${key}.principalRepayment`,season.principalRepayment)}${nInput('Extra principal repayment',`${key}.extraRepayment`,season.extraRepayment)}</div>
-  <div class="checks"><strong>Production premises:</strong>${premiseChecks}</div><div class="checks"><strong>Machine use:</strong>${machineChecks}</div><div class="checks"><strong>Machine purchases:</strong>${purchaseChecks}</div>
+  <div class="checks"><strong>Production premises (Year 1 game rules):</strong>${premiseChecks}</div><div class="checks"><strong>Machine use (Year 1 game rules):</strong>${machineChecks}</div><div class="checks"><strong>Machine purchases (Year 1 game rules):</strong>${purchaseChecks}</div>
   ${result ? resultBlock(result)+seasonDetails(result) : ''}</article>`;
 }
 
@@ -61,7 +79,7 @@ function renderY2Settings() {
 }
 
 function scenarioOpening(bridge) { if(state.autumnOverride.enabled) return { cash:round(state.autumnOverride.cash),debt:round(state.autumnOverride.debt),taxLoss:round(state.autumnOverride.taxLoss),machines:state.autumnOverride.m1Life>0?[{...state.y2Params.machines[0],id:'M1-actual',sourceId:'M1',remainingLife:round(state.autumnOverride.m1Life)}]:[]}; return bridge.ending; }
-function pnl(r) { const rows=[['Revenue',r.revenue],['Milk',-r.milk],['Maintenance — all owned machines',-r.maintenance],['Depreciation — all owned machines',-r.depreciation],['Transport',-r.transport],['Market spending',-r.market],['Bonus',-r.bonus],['Salaries',-r.salaries],['Rent',-r.rent],['Interest',-r.interest],['Minimum costs',-r.minimumCosts],['Profit before tax',r.preTaxProfit],['Tax-loss use',-r.taxLossUsed],['Tax',-r.tax],['Net profit',r.netProfit]];return `<table class="table"><tbody>${rows.map(([l,v])=>`<tr><td>${l}</td><td>${fmt(v)}</td></tr>`).join('')}</tbody></table>`;}
+function pnl(r) { const rows=[['Revenue',r.revenue],['Milk',-r.milk],['Maintenance — all owned machines',-r.maintenance],['Depreciation — all owned machines',-r.depreciation],['Gross profit',r.grossProfit],['Transport',-r.transport],['Market spending',-r.market],['Bonus (positive gross profit)',-r.bonus],['Salaries',-r.salaries],['Rent',-r.rent],['Interest',-r.interest],['Other minimum costs',-r.minimumCosts],['Profit before tax',r.preTaxProfit],['Tax-loss pool used',-r.taxLossUsed],['Game tax',-r.tax],['Net profit',r.netProfit]];return `<table class="table"><tbody>${rows.map(([l,v])=>`<tr><td>${l}</td><td>${fmt(v)}</td></tr>`).join('')}</tbody></table>`;}
 function scenarioCard(letter, s, r, sensitivity) {
  const p=state.y2Params, owned=(scenarioOpening(currentBridge).machines||[]), activeOptions=owned;
  const checks=(list,path,selected,label,empty='')=>`<div class="checks"><strong>${label}:</strong>${list.length?list.map(m=>`<label><input type="checkbox" data-array="${path}" value="${m.id}" ${selected?.includes(m.id)||selected?.includes(m.sourceId)||selected?.includes(m.modelId)?'checked':''}> ${m.name}</label>`).join(''):empty}</div>`;

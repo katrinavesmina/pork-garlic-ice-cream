@@ -5,9 +5,9 @@ export const suppliedWinter = {
   openingCash: 100000, production: 60000, milkTons: 3, salesRequest: 60000,
   assumedSales: 60000, market: 3000, premise: 'D', machineUse: ['M1'],
   purchases: ['M1'], borrowing: 0, interestRate: 0, repaymentTerm: 0,
-  principalRepayment: 0, extraRepayment: 0, minimumCosts: 4204,
+  principalRepayment: 0, extraRepayment: 0, minimumCosts: 0,
   price: 2, milkPrice: 20000, milkYield: 20000, salaries: 10000,
-  bonusRate: 0, taxRate: 0
+  bonusRate: 5, taxRate: 10
 };
 
 const normMachine = (m) => ({ ...m, remainingLife: Math.max(0, round(m.remainingLife)), qty: round(m.qty || 1) });
@@ -45,8 +45,9 @@ export function calculateSeason(input) {
   const depreciation = owned.reduce((s, m) => s + round(m.depreciation), 0);
   const milk = round(input.milkTons) * round(p.milkPrice);
   const revenue = actualSales * round(p.price);
-  const bonusBase = Math.max(0, revenue - milk - maintenance - depreciation - rent - transport - round(input.market) - round(p.salaries) - round(input.minimumCosts));
-  const bonus = round(bonusBase * (Number(p.bonusRate || 0) / 100));
+  // Year 1 rules: bonus is 5% of positive gross profit, before all operating costs below.
+  const grossProfit = revenue - milk - maintenance - depreciation;
+  const bonus = round(Math.max(0, grossProfit) * (Number(p.bonusRate || 0) / 100));
   const openingDebt = round(input.opening?.debt);
   const borrowing = round(input.borrowing);
   const interest = round((openingDebt + borrowing) * (Number(input.interestRate || 0) / 100));
@@ -65,7 +66,7 @@ export function calculateSeason(input) {
   const nextMachines = owned.map((m) => ({ ...m, remainingLife: Math.max(0, round(m.remainingLife) - 1) })).filter((m) => m.remainingLife > 0);
   return {
     requestedProduction, production, milkSupported, activeCapacity, requestedSales, assumedSales, actualSales, unusedMilk, spoilage,
-    revenue, milk, maintenance, depreciation, transport: round(transport), market: round(input.market), bonus, salaries: round(p.salaries), rent,
+    revenue, milk, maintenance, depreciation, grossProfit, transport: round(transport), market: round(input.market), bonus, salaries: round(p.salaries), rent,
     interest, minimumCosts: round(input.minimumCosts), preTaxProfit, taxLossUsed, taxableProfit, tax, netProfit,
     machinePurchases, borrowing, principalRepayment, cashBeforeFinance, closingCash, debt: openingDebt + borrowing - principalRepayment,
     taxLoss, machines: nextMachines, premises: uniquePremises.map((x) => x.name), flags: {

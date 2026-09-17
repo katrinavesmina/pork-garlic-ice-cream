@@ -14,7 +14,7 @@ A responsive, browser-only classroom planning tool that compares **only two Year
 
 ## Important assumptions
 
-The known 410,000-unit Year 2 Winter market forecast is displayed as a reference, not promised sales. The Year 1 Spring–Autumn entries start as empty estimates; the planner deliberately does not fabricate classroom results. In the supplied Winter test, the editable Sh 4,204 minimum-cost line is required to reconcile the given result. The tax rate is zero in that test because no tax rate was provided.
+The known 410,000-unit Year 2 Winter market forecast is displayed as a reference, not promised sales. The Year 1 Spring–Autumn entries start as empty estimates; the planner deliberately does not fabricate classroom results. The supplied Winter test follows the Year 1 rules: the posted bonus is Sh 2,691 (5% of positive gross profit) and game tax is Sh 1,513 (10% after tax-loss use). These reconcile the expected net profit and closing cash without an invented minimum-cost line.
 
 Selected production premises split planned production evenly by default; sold units and transport then follow that production proportion. Maintenance and depreciation apply to every owned machine, including an idle machine. Machine purchases and loan principal affect cash flow but are excluded from profit.
 

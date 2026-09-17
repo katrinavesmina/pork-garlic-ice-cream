@@ -1,0 +1,11 @@
+.season-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.season-nav p { margin: 3px 0 0; }
+.season-buttons { display: flex; gap: 7px; flex-wrap: wrap; }
+.season-buttons button { background: #e4eee9; color: var(--pine); }
+.season-buttons button.selected { background: var(--pine); color: #fff; }

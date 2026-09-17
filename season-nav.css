@@ -7,5 +7,5 @@
 }
 .season-nav p { margin: 3px 0 0; }
 .season-buttons { display: flex; gap: 7px; flex-wrap: wrap; }
-.season-buttons button { background: #e4eee9; color: var(--pine); }
-.season-buttons button.selected { background: var(--pine); color: #fff; }
+.season-buttons button { background: #f6e3d5; color: var(--wine); }
+.season-buttons button.selected { background: var(--wine); color: #fff; }

@@ -14,3 +14,12 @@
 .allocation-panel p, .sensitivity-panel p { margin: 4px 0 10px; }
 .allocation-result h4, .sensitivity-panel h4 { margin-top: 0; }
 .sensitivity-panel { border-left: 4px solid var(--coral); }
+
+/* Each Winter option is already one half of the comparison. Keep its inputs and
+   results in a single internal column so narrow grid tracks never paint over the
+   neighbouring option (notably in Safari fullscreen). */
+.scenario { min-width: 0; overflow: hidden; }
+.scenario-layout { grid-template-columns: minmax(0, 1fr); }
+.scenario-layout > * { min-width: 0; }
+.scenario .table { table-layout: fixed; }
+.scenario .table td:first-child, .scenario .table th:first-child { overflow-wrap: anywhere; }

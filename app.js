@@ -26,13 +26,21 @@ let state;
 try { state = JSON.parse(localStorage.getItem(KEY)) || defaults(); } catch { state = defaults(); }
 // Update earlier saved browser states to the Year 1 rule catalog without discarding user edits.
 const mergeCatalog = (current, rules) => rules.map(rule => ({ ...rule, ...(current || []).find(item => item.id === rule.id) }));
+const mergePremiseRules = (current) => y1Premises.map(rule => {
+  const saved = (current || []).find(item => item.id === rule.id);
+  // Remove only the zero-value placeholders used by the first version; retain genuine later edits.
+  const isLegacyPlaceholder = saved && (!saved.rent && !saved.transport) && (rule.id === 'E' || rule.id === 'F' || String(saved.name || '').includes('estimate'));
+  return isLegacyPlaceholder ? { ...rule } : { ...rule, ...saved };
+});
 state.year1Machines = mergeCatalog(state.year1Machines, y1Machines);
-state.year1Params = { ...y1Params, ...state.year1Params, premises: mergeCatalog(state.year1Params?.premises, y1Premises), bonusRate:5, taxRate:10 };
-state.y2Params = { ...y2Params, ...state.y2Params, premises: mergeCatalog(state.y2Params?.premises, y1Premises), machines: mergeCatalog(state.y2Params?.machines, y1Machines) };
+state.year1Params = { ...y1Params, ...state.year1Params, premises: mergePremiseRules(state.year1Params?.premises), bonusRate:5, taxRate:10 };
+state.y2Params = { ...y2Params, ...state.y2Params, premises: mergePremiseRules(state.y2Params?.premises), machines: mergeCatalog(state.y2Params?.machines, y1Machines) };
 // Earlier versions listed Machine 2 as a zero-value placeholder. Replace that known placeholder with the Year 1 reference figures.
 const oldM2 = state.y2Params.machines.find(machine => machine.id === 'M2');
 if (oldM2 && !oldM2.capacity && !oldM2.purchaseCost && !oldM2.maintenance && !oldM2.depreciation) Object.assign(oldM2, y1Machines.find(machine => machine.id === 'M2'));
 if (state.winter?.minimumCosts === 4204) state.winter.minimumCosts = 0;
+if (state.scenarioA?.minimumCosts === 4204) state.scenarioA.minimumCosts = 0;
+if (state.scenarioB?.minimumCosts === 4204) state.scenarioB.minimumCosts = 0;
 
 const $ = (s) => document.querySelector(s);
 const title = (name, description) => `<div class="section-head"><div><h2>${name}</h2><p>${description}</p></div></div>`;
